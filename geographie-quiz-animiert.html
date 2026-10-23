@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Geo-Quiz Klasse 7</title>
+<style>
+:root{--bg1:#d7ecff;--bg2:#e9fbe9;--card:#fff;--ink:#17283a;--mute:#5a6b7d;--line:#cddbe8;--acc:#2f6bff;--ok:#16a05a;--okbg:#dcf7e8;--bad:#d1453b;--badbg:#fde7e5;--gold:#ffb703}
+@media (prefers-color-scheme:dark){:root{--bg1:#10203a;--bg2:#12301f;--card:#1a2638;--ink:#eaf1fa;--mute:#9db0c6;--line:#34475e;--acc:#7da6ff;--ok:#4fd68f;--okbg:#14382a;--bad:#ff8b80;--badbg:#3d201d}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--ink);background:linear-gradient(160deg,var(--bg1),var(--bg2));font:17px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding:16px}
+main{max-width:620px;margin:0 auto}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+h1{font-size:1.35rem;margin:0}
+.globe{display:inline-block;animation:spin 6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tools{display:flex;gap:8px;align-items:center}
+.pill{background:var(--card);border:2px solid var(--line);border-radius:99px;padding:4px 12px;font-weight:700;font-size:.9rem}
+.pill.hot{border-color:var(--gold);animation:pop .4s}
+.snd{cursor:pointer;font:inherit}
+.track{position:relative;height:14px;background:var(--line);border-radius:99px;margin:8px 0 14px}
+.track i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc),var(--ok));border-radius:99px;transition:width .5s cubic-bezier(.3,1.4,.5,1)}
+.track b{position:absolute;top:-9px;left:0;font-size:1.3rem;transition:left .5s cubic-bezier(.3,1.4,.5,1);transform:translateX(-50%)}
+.card{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 6px 20px rgba(20,40,80,.12);animation:slide .4s}
+@keyframes slide{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.num{color:var(--mute);font-size:.85rem;font-weight:600}
+.q{font-size:1.2rem;font-weight:700;margin:4px 0 14px}
+.opt{display:block;width:100%;text-align:left;font:inherit;color:inherit;background:var(--bg1);border:2.5px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 10px;cursor:pointer;transition:transform .12s,border-color .12s}
+.opt:hover:not(:disabled){transform:translateY(-2px);border-color:var(--acc)}
+.opt:focus-visible,.btn:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.opt:disabled{cursor:default}
+.opt.ok{border-color:var(--ok);background:var(--okbg);animation:pop .5s}
+.opt.bad{border-color:var(--bad);background:var(--badbg);animation:shake .45s}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.07)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.fb{margin-top:6px;padding:12px 14px;border-radius:12px;animation:slide .35s}
+.fb.ok{background:var(--okbg)}.fb.bad{background:var(--badbg)}
+.big{display:block;font-size:1.5rem;font-weight:800;margin-bottom:2px}
+.fb.ok .big{animation:bounce .7s}
+@keyframes bounce{0%{transform:scale(.3);opacity:0}50%{transform:scale(1.25)}70%{transform:scale(.95)}100%{transform:scale(1);opacity:1}}
+.row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.btn{font:700 1rem system-ui,sans-serif;border:0;background:var(--acc);color:#fff;border-radius:12px;padding:12px 22px;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.2)}
+.btn:active{transform:translateY(3px);box-shadow:none}
+.btn.ghost{background:transparent;color:var(--acc);border:2px solid var(--acc);box-shadow:none}
+.hint{color:var(--mute);font-style:italic;margin-top:8px}
+.end{text-align:center}
+.trophy{font-size:4.5rem;display:inline-block;animation:bounce 1s,float 2.5s 1s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-10px) rotate(6deg)}}
+.score{font-size:2.8rem;font-weight:800}
+.stars{font-size:2rem;letter-spacing:4px}
+.stars span{display:inline-block;opacity:0;animation:bounce .6s forwards}
+.rev{text-align:left;margin:14px 0 0;padding:0;list-style:none;font-size:.95rem}
+.rev li{padding:8px 0;border-top:1px solid var(--line)}
+canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<main>
+<header>
+<h1><span class="globe">🌍</span> Geo-Quiz · Klasse 7</h1>
+<div class="tools"><span class="pill" id="st">🔥 0</span><button class="pill snd" id="snd" type="button" aria-label="Ton an oder aus">🔊</button></div>
+</header>
+<div class="track"><i id="fill"></i><b id="rk">🚀</b></div>
+<div id="app"></div>
+</main>
+<script>
+// Format: [Frage, [Antworten], Index der richtigen Antwort, Hinweis, Erklärung]
+const Q=[
+["Welcher Breitenkreis trennt die Nord- von der Südhalbkugel?",["Der Nullmeridian","Der Äquator","Der nördliche Wendekreis","Der Polarkreis"],1,"Er liegt bei 0° geographischer Breite.","Der Äquator ist der Breitenkreis bei 0°. Der Nullmeridian ist ein Längenkreis."],
+["In welcher Klimazone liegt der tropische Regenwald?",["Polarzone","Gemäßigte Zone","Subtropen","Tropen"],3,"Dort ist es das ganze Jahr heiß und feucht.","Der Regenwald liegt beiderseits des Äquators in den Tropen."],
+["Wo treten Erdbeben und Vulkanausbrüche besonders häufig auf?",["Mitten in großen Ebenen","An den Grenzen der Erdplatten","Nur in Wüsten","Nur am Nordpol"],1,"Denk an die Plattentektonik.","An Plattengrenzen bauen sich Spannungen auf und Magma kann aufsteigen."],
+["Wie heißt die größte heiße Trockenwüste der Erde?",["Gobi","Kalahari","Sahara","Atacama"],2,"Sie liegt im Norden Afrikas.","Die Sahara in Nordafrika ist die größte heiße Wüste."],
+["Eine Karte hat den Maßstab 1 : 50 000. Wie viele Kilometer sind 2 cm auf der Karte?",["0,1 km","1 km","5 km","10 km"],1,"Rechne 2 cm mal 50 000 und wandle um.","2 cm × 50 000 = 100 000 cm = 1000 m = 1 km."],
+["Welcher Kontinent ist der größte?",["Asien","Afrika","Nordamerika","Europa"],0,"Dort liegen China und Indien.","Asien ist der größte Kontinent und hat die meisten Einwohner."],
+["Wie heißt der höchste Berg der Erde?",["Mont Blanc","Kilimandscharo","Mount Everest","Zugspitze"],2,"Er liegt im Himalaya.","Der Mount Everest hat rund 8850 m Höhe."],
+["Durch welche Stadt verläuft der Nullmeridian?",["Rom","London (Greenwich)","Berlin","Madrid"],1,"Ein Stadtteil gab ihm den Namen.","Der Nullmeridian verläuft durch Greenwich bei London."],
+["Wie heißt der längste Fluss Afrikas?",["Nil","Kongo","Niger","Sambesi"],0,"Er fließt durch Ägypten.","Der Nil fließt von Süden nach Norden ins Mittelmeer."],
+["Was kennzeichnet das Klima der Savanne?",["Das ganze Jahr Schnee","Regenzeit und Trockenzeit im Wechsel","Kein Niederschlag das ganze Jahr","Dauerfrost"],1,"Das Wetter wechselt im Jahresverlauf.","In der Savanne wechseln sich Regenzeit und Trockenzeit ab."],
+["Welcher Ozean ist der größte?",["Atlantik","Pazifik","Indischer Ozean","Arktischer Ozean"],1,"Sein Name bedeutet „der Friedliche“.","Der Pazifik ist der größte und tiefste Ozean der Erde."],
+["Welches Gebirge bildet die Grenze zwischen Europa und Asien?",["Alpen","Anden","Ural","Pyrenäen"],2,"Es liegt in Russland.","Der Ural gilt als Grenze zwischen Europa und Asien."],
+["Wie heißt die Hauptstadt von Australien?",["Sydney","Canberra","Melbourne","Perth"],1,"Es ist nicht die größte Stadt.","Hauptstadt ist Canberra, nicht das bekanntere Sydney."],
+["Was ist ein Flussdelta?",["Eine Flussquelle","Eine Mündung mit vielen Flussarmen","Ein Wasserfall","Ein Gebirgspass"],1,"Es liegt dort, wo ein Fluss ins Meer fließt.","Im Delta teilt sich der Fluss vor der Mündung in viele Arme auf, zum Beispiel beim Nil."],
+["Welcher Kontinent liegt am Südpol?",["Australien","Südamerika","Afrika","Antarktis"],3,"Dort ist alles von Eis bedeckt.","Die Antarktis liegt am Südpol und ist fast vollständig von Eis bedeckt."],
+["Wo ist auf den meisten Karten Norden?",["Oben","Rechts","Unten","Links"],0,"Schau auf den Nordpfeil.","Karten sind in der Regel genordet, Norden liegt oben."],
+["Was zeigen Höhenlinien auf einer Karte?",["Orte gleicher Temperatur","Orte gleicher Höhe","Orte gleichen Niederschlags","Staatsgrenzen"],1,"Sie verbinden Punkte mit demselben Wert.","Höhenlinien verbinden Orte, die gleich hoch über dem Meeresspiegel liegen."],
+["Welches Land ist flächenmäßig das größte der Erde?",["Kanada","China","Russland","USA"],2,"Es liegt in Europa und Asien.","Russland ist mit über 17 Mio. km² das flächengrößte Land."],
+["Was ist der Monsun?",["Ein Vulkan","Ein Wind mit wechselnder Richtung und Regenzeit","Eine Wüstenart","Eine Meeresströmung"],1,"Er prägt das Klima in Südasien.","Der Monsun ist ein jahreszeitlich wechselnder Wind, der im Sommer starken Regen bringt."],
+["Welche Wüste in Südamerika gilt als eine der trockensten der Erde?",["Sahara","Atacama","Gobi","Namib"],1,"Sie liegt in Chile.","Die Atacama in Chile ist eine der trockensten Wüsten der Erde."]
+];
+const PRAISE=["Super!","Genau!","Stark!","Perfekt!","Klasse!","Richtig!","Wow!"],EMO=["🎉","🌟","🏆","🚀","💪","🥳"];
+const L="ABCD";let i=0,pts=0,streak=0,best=0,ans=[],done=false,sound=true;
+const app=document.getElementById("app"),st=document.getElementById("st"),fill=document.getElementById("fill"),rk=document.getElementById("rk");
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+// Ton
+let ac;function tone(f,d,t){if(!sound)return;try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.type=t||"sine";o.frequency.value=f;g.gain.setValueAtTime(.15,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
+function good(){[523,659,784].forEach((f,k)=>setTimeout(()=>tone(f,.25),k*90))}
+function bad(){tone(180,.3,"sawtooth")}
+document.getElementById("snd").onclick=e=>{sound=!sound;e.target.textContent=sound?"🔊":"🔇"};
+// Konfetti
+const cv=document.getElementById("cv"),cx=cv.getContext("2d");let P=[],run=false;
+function size(){cv.width=innerWidth;cv.height=innerHeight}size();addEventListener("resize",size);
+function confetti(n,x,y){if(matchMedia("(prefers-reduced-motion:reduce)").matches)return;const C=["#ff595e","#ffca3a","#8ac926","#1982c4","#6a4c93","#ff924c"];
+for(let k=0;k<n;k++)P.push({x:x??Math.random()*cv.width,y:y??-10,vx:(Math.random()-.5)*(y==null?4:12),vy:y==null?Math.random()*3+2:-Math.random()*12-4,s:Math.random()*8+5,r:Math.random()*6,vr:(Math.random()-.5)*.4,c:C[k%6],l:160+Math.random()*60});
+if(!run){run=true;requestAnimationFrame(tick)}}
+function tick(){cx.clearRect(0,0,cv.width,cv.height);P=P.filter(p=>p.l>0&&p.y<cv.height+20);
+P.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.18;p.r+=p.vr;p.l--;cx.save();cx.translate(p.x,p.y);cx.rotate(p.r);cx.fillStyle=p.c;cx.fillRect(-p.s/2,-p.s/3,p.s,p.s*.6);cx.restore()});
+if(P.length)requestAnimationFrame(tick);else run=false}
+function prog(){const p=i/Q.length*100;fill.style.width=p+"%";rk.style.left=p+"%"}
+function hud(){st.textContent="🔥 "+streak;st.classList.remove("hot");if(streak>=3){void st.offsetWidth;st.classList.add("hot")}}
+function render(){
+app.textContent="";prog();hud();
+if(i>=Q.length)return result();
+const q=Q[i];done=false;
+const card=el("div","card");card.append(el("div","num","Frage "+(i+1)+" von "+Q.length),el("p","q",q[0]));
+const box=el("div");
+q[1].forEach((t,k)=>{const b=el("button","opt",L[k]+") "+t);b.type="button";b.onclick=ev=>pick(k,box,fb,nxt,hintB,hint,ev);box.append(b)});
+const fb=el("div","fb");fb.hidden=true;fb.setAttribute("role","status");
+const hint=el("div","hint","💡 "+q[3]);hint.hidden=true;
+const hintB=el("button","btn ghost","💡 Hinweis");hintB.type="button";hintB.onclick=()=>{hint.hidden=false;hintB.hidden=true};
+const nxt=el("button","btn",i<Q.length-1?"Weiter ➜":"Ergebnis 🏁");nxt.type="button";nxt.hidden=true;nxt.onclick=()=>{i++;render()};
+const row=el("div","row");row.append(hintB,nxt);
+card.append(box,hint,fb,row);app.append(card);
+}
+function pick(k,box,fb,nxt,hintB,hint,ev){
+if(done)return;done=true;const q=Q[i],g=k===q[2];ans.push(k);
+[...box.children].forEach((b,j)=>{b.disabled=true;if(j===q[2])b.classList.add("ok");else if(j===k)b.classList.add("bad")});
+fb.hidden=false;fb.className="fb "+(g?"ok":"bad");fb.textContent="";
+if(g){pts++;streak++;best=Math.max(best,streak);
+const r=ev.target.getBoundingClientRect();confetti(streak>=3?90:45,r.left+r.width/2,r.top);good();
+fb.append(el("span","big",EMO[Math.floor(Math.random()*6)]+" "+PRAISE[Math.floor(Math.random()*7)]+(streak>=3?" 🔥 "+streak+" in Folge!":"")))}
+else{streak=0;bad();fb.append(el("span","big","😅 Knapp daneben!"))}
+fb.append(document.createTextNode(q[4]));
+hud();hintB.hidden=true;hint.hidden=true;nxt.hidden=false;nxt.focus();
+}
+function result(){
+const card=el("div","card end");const p=pts/Q.length;
+card.append(el("div","trophy",p>=.9?"🏆":p>=.6?"🥈":"🎯"));
+const sc=el("div","score","0 / "+Q.length);card.append(sc);
+let c=0;const iv=setInterval(()=>{c++;sc.textContent=c+" / "+Q.length;tone(400+c*40,.08);if(c>=pts)clearInterval(iv)},pts?90:0);
+const n=Math.max(1,Math.round(p*5));const stars=el("div","stars");
+for(let k=0;k<5;k++){const s=el("span",null,k<n?"⭐":"☆");s.style.animationDelay=(.3+k*.2)+"s";stars.append(s)}
+card.append(stars,el("p",null,p>=.9?"Weltklasse! Du bist ein echter Geo-Profi! 🌍":p>=.7?"Sehr stark! Fast alles richtig.":p>=.5?"Gut gemacht! Mit etwas Üben wirst du noch besser.":"Das war ein Anfang! Versuch es gleich noch einmal."),
+el("p",null,"Längste Serie: 🔥 "+best));
+const ul=el("ul","rev");
+Q.forEach((q,k)=>{if(ans[k]!==q[2]){const li=el("li");li.append(el("b",null,(k+1)+". "+q[0]),el("br"),document.createTextNode("Richtig: "+q[1][q[2]]+". "+q[4]));ul.append(li)}});
+if(ul.children.length)card.append(el("p",null,"Das kannst du noch wiederholen:"),ul);
+const row=el("div","row");row.style.justifyContent="center";const r=el("button","btn","🔄 Nochmal spielen");r.type="button";r.onclick=()=>{i=0;pts=0;streak=0;best=0;ans=[];render()};row.append(r);card.append(row);
+app.append(card);
+if(p>=.5){confetti(200);setTimeout(()=>confetti(150),500);setTimeout(()=>confetti(150),1100)}
+}
+render();
+</script>
+</body>
+</html>
